@@ -1,0 +1,3 @@
+# What FAST-LIO writes as it runs.
+FAST_LIO/Log/*.txt
+FAST_LIO/Log/*.csv
