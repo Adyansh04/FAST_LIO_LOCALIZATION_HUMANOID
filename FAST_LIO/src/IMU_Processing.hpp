@@ -21,6 +21,9 @@
 #include <geometry_msgs/msg/vector3.hpp>
 #include "use-ikfom.hpp"
 
+/// The longest step between two IMU samples that is integrated as motion, s.
+constexpr double MAX_IMU_STEP = 0.5;
+
 /// *************Preconfiguration
 
 #define MAX_INI_COUNT (1000)
@@ -268,7 +271,17 @@ void ImuProcess::UndistortPcl(const MeasureGroup &meas, esekfom::esekf<state_ikf
     {
       dt = tail_stamp - head_stamp;
     }
-    
+
+    // A gap in the IMU, a sensor or its driver that paused, is not motion: one 40 s step drove
+    // the state off the map for good. Hold it still over the gap; the next scan match corrects it.
+    if (dt > MAX_IMU_STEP)
+    {
+      state_ikfom held = kf_state.get_x();
+      held.vel.setZero();
+      kf_state.change_x(held);
+      dt = 0.0;
+    }
+
     in.acc = acc_avr;
     in.gyro = angvel_avr;
     Q.block<3, 3>(0, 0).diagonal() = cov_gyr;
